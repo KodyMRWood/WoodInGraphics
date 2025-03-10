@@ -39,3 +39,5 @@ ipch/
 *.opensdf
 *.sdf
 *.cachefile
+/glfw-3.4
+/WoodInGraphics/WoodInGraphics/x64/Debug
