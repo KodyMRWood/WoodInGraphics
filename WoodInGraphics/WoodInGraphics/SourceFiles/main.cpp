@@ -26,12 +26,12 @@ const char* _fragmentShaderSource =
 "fragColor = vec4(1.0f,0.5f,0.2f,1.0f); \n"
 "}\0";
 
-#pragma endregion
+#pragma endregion Shaders
 
 #pragma region Function Declarations
 void FrameBufferSizeCallback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
-#pragma endregion
+#pragma endregion Function Declarations
 
 
 
@@ -39,18 +39,25 @@ void processInput(GLFWwindow* window);
 const unsigned int ScreenWidth = 800;
 const unsigned int ScreenHeight = 600;
 const char WindowName[15] = "WoodInGraphics";
-#pragma endregion
+#pragma endregion Constants
 
 
 
 #pragma region Private Variables
 float _vertices[] =
 {
-   -0.5f, -0.5, 0.0f,
-	0.5f, -0.5, 0.0f,
-	0.0f,  0.5, 0.0f
+	0.5f, 0.5f, 0.0f, // Top right
+	0.5f, -0.5, 0.0f, // Bottom right
+   -0.5f, -0.5, 0.0f, // Bottom left
+   -0.5f, 0.5f, 0.0f  // Top left
 };
-#pragma endregion
+
+unsigned int _indices[] =
+{
+	0,1,3, // Triangle 1
+	1,2,3  // Triangle 2
+};
+#pragma endregion Private Variables
 
 
 /// <summary>
@@ -65,7 +72,7 @@ int main()
 
 #ifdef __APPLE__
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
+#endif __APPLE__
 
 	// Create Window
 	GLFWwindow* window = glfwCreateWindow(ScreenWidth, ScreenHeight, WindowName, NULL, NULL);
@@ -140,15 +147,20 @@ int main()
 	// Definition VertexBufferObjects (VBO) - are pieces of data or objects (buffers) that hold the vertices that will be sent to the shaders.
 	// Definition VertexArrayObjects  (VAO) - are pieces of data or objects (buffers) similar to VBOs but VAO hold VBOs and the state in which to send the VBO. So instead of call all VBOs and their states.
 	// We can send a VAO and it will send all the VBO and attribs valuies at the same time
-	unsigned int VBO, VAO;
+	// Definition ElementBufferObject (EBO) - are pieces of data or objects (buffers) that uses indices to determine which vertices to use. Prevents sending overlapping vertices
+	unsigned int VBO, VAO, EBO;
 	// 1. Generate VAO and VBO
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &EBO);
 	// 2. Bind VAO
 	glBindVertexArray(VAO);
 	// 3. Bind Vertices to a VBO
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(_vertices), _vertices, GL_STATIC_DRAW);
+	// 3a. Bind indices to an EBO
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(_indices), _indices, GL_STATIC_DRAW);
 	// 4. Set Attributes pointers
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
@@ -161,6 +173,9 @@ int main()
 	// VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
 	// Unbind VAO
 	glBindVertexArray(0);
+
+	// Unbind EBO - Always Unbind EBO AFTER unbinding VAO
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 
 	// Run while the window is open (main loop)
@@ -178,7 +193,7 @@ int main()
 		// Bind VAO that we want to use
 		glBindVertexArray(VAO);
 		// Draw triangle
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		// Swap buffers
 		glfwSwapBuffers(window);
@@ -189,6 +204,7 @@ int main()
 	// Cleanup if window closes
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
+	glDeleteBuffers(1, &EBO);
 	glDeleteProgram(shaderProgram);
 
 	glfwTerminate();
@@ -197,7 +213,6 @@ int main()
 
 
 #pragma region Private Methods
-
 
 /// <summary>
 /// Callback for when the window is resized
@@ -220,5 +235,13 @@ void processInput(GLFWwindow* window)
 	{
 		glfwSetWindowShouldClose(window, true);
 	}
+	else if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+	{
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+	else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+	{
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	}
 }
-#pragma endregion
+#pragma endregion Private Methods
