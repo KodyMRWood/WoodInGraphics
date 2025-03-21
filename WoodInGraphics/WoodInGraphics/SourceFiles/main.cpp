@@ -8,25 +8,8 @@
 
 #include <iostream>
 
-#pragma region Shaders
-
-const char *_vertexShaderSource = 
-"#version 330 core\n"
-"layout (location =0) in vec3 aPos; \n"
-"void main()\n"
-"{\n"
-"gl_Position = vec4(aPos.x,aPos.y,aPos.z,1.0f); \n"
-"}\0";
-
-const char* _fragmentShaderSource =
-"#version 330 core\n"
-"out vec4 fragColor; \n"
-"void main()\n"
-"{\n"
-"fragColor = vec4(1.0f,0.5f,0.2f,1.0f); \n"
-"}\0";
-
-#pragma endregion Shaders
+#include "Shader.h"
+#include "stb_image.h"
 
 #pragma region Function Declarations
 void FrameBufferSizeCallback(GLFWwindow* window, int width, int height);
@@ -45,11 +28,11 @@ const char WindowName[15] = "WoodInGraphics";
 
 #pragma region Private Variables
 float _vertices[] =
-{
-	0.5f, 0.5f, 0.0f, // Top right
-	0.5f, -0.5, 0.0f, // Bottom right
-   -0.5f, -0.5, 0.0f, // Bottom left
-   -0.5f, 0.5f, 0.0f  // Top left
+{	//Vertices		 Color            Texture Coords
+	0.5f, 0.5f, 0.0f, 1.0f, 0.0f,0.0f, 1.0f,1.0f, // Top right
+	0.5f, -0.5, 0.0f, 0.0f, 1.0f,0.0f, 1.0f,0.0f, // Bottom right
+   -0.5f, -0.5, 0.0f, 0.0f, 0.0f,1.0f, 0.0f,0.0f, // Bottom left
+   -0.5f, 0.5f, 0.0f, 1.0f, 1.0f,0.0f, 0.0f,1.0f // Top left
 };
 
 unsigned int _indices[] =
@@ -57,6 +40,33 @@ unsigned int _indices[] =
 	0,1,3, // Triangle 1
 	1,2,3  // Triangle 2
 };
+
+float _texCoords[] =
+{
+	0.0f,0.0f, // Bottom left
+	0.0f,1.0f, // Top left
+	1.0f,0.0f, // Top right
+	1.0f,1.0f  // Bottom right
+};
+
+
+
+#pragma region Extra Triangles
+//float _triangleVertices1[] =
+//{
+//	-0.75f, 0.75f, 0.0f, // Top left
+//	0.0f,  0.75f, 0.0f, // Top right
+//   -0.75f, 0.0f, 0.0f, // Bottom left
+//};
+//
+//float _triangleVertices2[] =
+//{
+//	0.75f, 0.0f, 0.0f, // Top right
+//	0.75f, -0.75, 0.0f, // Bottom right
+//	0.0f, -0.75, 0.0f, // Bottom left
+//};
+#pragma endregion
+
 #pragma endregion Private Variables
 
 
@@ -93,55 +103,35 @@ int main()
 		return -1;
 	}
 
-	// Null Check variables
-		// Check if shader compiled successfully
-	int success;
-	char infolog[512];
 
-	// ---- Vertex Shader ----
-	// Create shader object
-	// Attach out shader to shader object
-	// Compile the shader
-	unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vertexShader, 1, &_vertexShaderSource, NULL);
-	glCompileShader(vertexShader);
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-	if (!success)
-	{
-		glGetShaderInfoLog(vertexShader, 512, NULL, infolog);
-		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infolog << std::endl;
-	}
+	// Create Shader Object
+	Shader shaderObj("SourceFiles/BaseVertexShader.vert", "SourceFiles/BaseFragmentShader.frag");
 
-	// ---- Fragment Shader ----
-	// Create shader object
-	// Attach out shader to shader object
-	// Compile the shader
-	unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragmentShader, 1, &_fragmentShaderSource, NULL);
-	glCompileShader(fragmentShader);
-	// Check if shader compiled successfully
-	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-	if (!success)
-	{
-		glGetShaderInfoLog(fragmentShader, 512, NULL, infolog);
-		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infolog << std::endl;
-	}
 
-	// Bind Shader to Shader object
-	// *Warning* Linker errors can occur if typo in shaders, since we link them (glLinkProgram)
-	unsigned int shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-	glLinkProgram(shaderProgram);
-	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-	if (!success)
+	// Generate Texture
+	unsigned int texture;
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	// Set Wrapping setings for the S and T axis (texture coords are in STR instead of XYZ)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	// Set Texture filtering for magnifying and minifying
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	// Load Image
+	int imgWidth, imgHeight, nrChannel;
+	unsigned char* data = stbi_load("Textures/WoodContainer.jpg", &imgWidth, &imgHeight, &nrChannel, 0);
+	if (data)
 	{
-		glGetProgramInfoLog(shaderProgram, 512, NULL, infolog);
-		std::cout << "ERROR::SHADER::LINKING_FAILED\n" << infolog << std::endl;
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
 	}
-		// Delete Shaders after linking, no longer needed
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
+	else
+	{
+		std::cout << "Fail to load texture" << std::endl;
+	}
+	stbi_image_free(data);
+
 
 	// ---- VBO & VAO ----
 	// Definition VertexBufferObjects (VBO) - are pieces of data or objects (buffers) that hold the vertices that will be sent to the shaders.
@@ -161,9 +151,15 @@ int main()
 	// 3a. Bind indices to an EBO
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(_indices), _indices, GL_STATIC_DRAW);
-	// 4. Set Attributes pointers
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	// 4. Set Verteices Attributes pointers
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
+	// 4a. Set Color Attributes pointers
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) (3* sizeof(float)));
+	glEnableVertexAttribArray(1);
+	// 4a. Set Texture Coordinate Attributes pointers
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) (6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
 	
 	// note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
 	// Unbind VBO as it is already bound
@@ -178,6 +174,44 @@ int main()
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 
+#pragma region Exercise Draw Triangles
+
+	// Triangle 1
+	//unsigned int VBOTri, VAOTri;
+	//// 1. Generate VAO and VBO
+	//glGenVertexArrays(1, &VAOTri);
+	//glGenBuffers(1, &VBOTri);
+	//// 2. Bind VAO
+	//glBindVertexArray(VAOTri);
+	//// 3. Bind Vertices to a VBO
+	//glBindBuffer(GL_ARRAY_BUFFER, VBOTri);
+	//glBufferData(GL_ARRAY_BUFFER, sizeof(_triangleVertices1), _triangleVertices1, GL_STATIC_DRAW);
+	//// 4. Set Attributes pointers
+	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	//glEnableVertexAttribArray(0);
+	//
+	//glBindBuffer(GL_ARRAY_BUFFER, 0);
+	//glBindVertexArray(0);
+	//
+	//// Triangle 1
+	//unsigned int VBOTri2, VAOTri2;
+	//// 1. Generate VAO and VBO
+	//glGenVertexArrays(1, &VAOTri2);
+	//glGenBuffers(1, &VBOTri2);
+	//// 2. Bind VAO
+	//glBindVertexArray(VAOTri2);
+	//// 3. Bind Vertices to a VBO
+	//glBindBuffer(GL_ARRAY_BUFFER, VBOTri2);
+	//glBufferData(GL_ARRAY_BUFFER, sizeof(_triangleVertices2), _triangleVertices2, GL_STATIC_DRAW);
+	//// 4. Set Attributes pointers
+	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	//glEnableVertexAttribArray(0);
+	//
+	//glBindBuffer(GL_ARRAY_BUFFER, 0);
+	//glBindVertexArray(0);
+
+#pragma endregion Exercise Draw Triangles
+
 	// Run while the window is open (main loop)
 	while (!glfwWindowShouldClose(window))
 	{
@@ -189,11 +223,41 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		//Rendering commands
-		glUseProgram(shaderProgram);
+		
+		//Set Shader to use
+		shaderObj.UseShader();
+
+		// Change Color overtime, and send through uniforms
+		//float time = glfwGetTime();
+		//float greenValue = (sin(time) * 0.5f) + 0.5f;
+		//int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
+		//// Uniform Exception Check
+		//if (vertexColorLocation == -1)
+		//{
+		//	std::cout << "ERROR::SHADER::UNIFORM_NOT_FOUND\n" << infolog << std::endl;
+		//}
+		// Send values to uniform at given location
+		//glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+
+		// Bind Texture
+		glBindTexture(GL_TEXTURE_2D, texture);
 		// Bind VAO that we want to use
 		glBindVertexArray(VAO);
-		// Draw triangle
+
+		// Draw Rectangle
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+#pragma region Draw triangle Exercise
+		////Draw Triangles for exercise
+		//// Bind VAO that we want to use
+		//glBindVertexArray(VAOTri);
+		//// Draw Rectangle
+		//glDrawArrays(GL_TRIANGLES, 0, 3);
+		//// Bind VAO that we want to use
+		//glBindVertexArray(VAOTri2);
+		//// Draw Rectangle
+		//glDrawArrays(GL_TRIANGLES, 0, 3);
+#pragma endregion
 
 		// Swap buffers
 		glfwSwapBuffers(window);
@@ -205,7 +269,6 @@ int main()
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
 	glDeleteBuffers(1, &EBO);
-	glDeleteProgram(shaderProgram);
 
 	glfwTerminate();
 	return 0;

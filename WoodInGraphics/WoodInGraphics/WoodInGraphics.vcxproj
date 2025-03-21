@@ -137,8 +137,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ShaderFiles\stb_image.cpp" />
     <ClCompile Include="SourceFiles\glad.c" />
     <ClCompile Include="SourceFiles\main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="SourceFiles\Shader.h" />
+    <ClInclude Include="SourceFiles\stb_image.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="SourceFiles\BaseFragmentShader.frag" />
+    <None Include="SourceFiles\BaseVertexShader.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
