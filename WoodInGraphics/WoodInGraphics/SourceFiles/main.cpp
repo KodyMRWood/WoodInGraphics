@@ -7,6 +7,7 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <algorithm>
 
 #include "Shader.h"
 #include "stb_image.h"
@@ -49,7 +50,7 @@ float _texCoords[] =
 	1.0f,1.0f  // Bottom right
 };
 
-
+float arrowAlpha = 0.0f;
 
 #pragma region Extra Triangles
 //float _triangleVertices1[] =
@@ -130,7 +131,32 @@ int main()
 	{
 		std::cout << "Fail to load texture" << std::endl;
 	}
+	// Delete data
 	stbi_image_free(data);
+
+	unsigned int texture2;
+	glGenTextures(1, &texture2);
+	glBindTexture(GL_TEXTURE_2D, texture2);
+	// Set Wrapping setings for the S and T axis (texture coords are in STR instead of XYZ)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	// Set Texture filtering for magnifying and minifying
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	stbi_set_flip_vertically_on_load(true);
+	unsigned char* data2 = stbi_load("Textures/KodyPic.png", &imgWidth, &imgHeight, &nrChannel, 0);
+	if (data2)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imgWidth, imgHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, data2);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		std::cout << "Fail to load texture" << std::endl;
+	}
+	// Delete data
+	stbi_image_free(data2);
 
 
 	// ---- VBO & VAO ----
@@ -212,6 +238,12 @@ int main()
 
 #pragma endregion Exercise Draw Triangles
 
+
+	//Set Shader to use
+	shaderObj.UseShader();
+	glUniform1i(glGetUniformLocation(shaderObj.ID, "texture1"), 0); // manually
+	shaderObj.SetInt("texture2", 1); // with Shader class, these two lines do the same thing but shows how to send uniforms
+
 	// Run while the window is open (main loop)
 	while (!glfwWindowShouldClose(window))
 	{
@@ -223,10 +255,7 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		//Rendering commands
-		
-		//Set Shader to use
-		shaderObj.UseShader();
-
+	
 		// Change Color overtime, and send through uniforms
 		//float time = glfwGetTime();
 		//float greenValue = (sin(time) * 0.5f) + 0.5f;
@@ -238,9 +267,13 @@ int main()
 		//}
 		// Send values to uniform at given location
 		//glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+		shaderObj.SetFloat("arrowAlpha", arrowAlpha);
 
 		// Bind Texture
+		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, texture2);
 		// Bind VAO that we want to use
 		glBindVertexArray(VAO);
 
@@ -305,6 +338,16 @@ void processInput(GLFWwindow* window)
 	else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
 	{
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	}
+	else if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+	{
+		arrowAlpha += 0.01f;
+		arrowAlpha = (arrowAlpha > 1.0f) ? 1.0f: arrowAlpha;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+	{
+		arrowAlpha -= 0.01f;
+		arrowAlpha = (arrowAlpha < 0.0f) ? 0.0f : arrowAlpha;
 	}
 }
 #pragma endregion Private Methods
